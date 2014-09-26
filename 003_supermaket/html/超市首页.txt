@@ -1,0 +1,623 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="1280*720 text/html; charset=UTF-8" />
+<title>超市首页</title>
+<script type="text/javascript" src="res/js/showlist.js"></script>
+<script type="text/javascript" src="res/js/key.js"></script>
+<script type="text/javascript" src="res/js/showSlip.js"></script>
+<script type="text/javascript" src="res/js/ajax.js"></script>
+<script type="text/javascript" src="res/js/util.js"></script>
+<script type="text/javascript" src="res/js/dmxdate.js"></script>
+<script type="text/javascript" src="res/js/json2.js"></script>
+<script type="text/javascript" src="res/js/cooks.js"></script>
+<script language="javascript" type="text/javascript">
+var focusPos = "MENU";
+var oderFocusPos = "";
+var menus =  [];
+
+var menuObj;
+var menuPos = 0;
+var menuDataPos = 0;
+var contents=[];
+var contentObj;
+var contentPos = 0;
+var contentDataPos = 0;
+
+var curPage = 1;
+var totalPage = 0;
+
+function load(){
+	menuList();
+}
+
+function menuList(){
+	var params= "key=L_${categoryId}_${rgnCode}_json_${categoryId}_1";
+	new Ajax.Request('dataEnginerServlet',{
+		method:"post",
+		parameters: params,
+		onSuccess:function(transport){
+			var response = transport.responseText;
+			var data = eval("("+response+")");
+			menus = data;
+			showMenu();
+			menuEffect();
+		},
+		onFailure: function(transport){
+		}
+	});
+}
+
+function getDataKey(){
+	var request = getRequestParam();
+	var key = request['key'];
+	if(key==""||key=="undefined"){
+		return "";
+	}
+	return key;
+}
+
+function showMenu(){
+	var length = menus.length; 
+	if(length > 6) length = 6;
+	menuObj = new showList(6, menus.length, 0, 42, window);
+	menuObj.dataList = menus;
+	menuObj.position = menuDataPos;
+	menuObj.focusPos = menuPos;
+	menuObj.showLoop = false;
+	menuObj.haveData = function(obj){
+		$("menu"+obj.idPos).style.background = "url({respath}/images/tab.png) no-repeat";
+		$("menu"+obj.idPos).innerHTML = menuObj.dataList[obj.dataPos].name;
+	};
+	menuObj.notData = function (obj){
+		$("menu"+obj.idPos).style.background = "url()";
+		$("menu"+obj.idPos).innerHTML = "";
+	};
+	menuObj.startShow();
+}
+
+function menuEffect(){
+   $("menu"+menuObj.lastFocusPos).style.background = "url({respath}/images/tab.png) no-repeat";
+   $("menu"+menuObj.lastFocusPos).style.color = "#FFFFFF";
+   $("menu"+menuObj.focusPos).style.background = "url({respath}/images/tab--.png) no-repeat";
+   $("menu"+menuObj.focusPos).style.color = "#000000";
+   curPage = 1;
+   contentList();
+}
+
+function toGoBack(){
+	var backurl = "${(backurl)?default('')}";
+	if(backurl==""){
+		history.go(-1);
+	}else{
+		window.location.href = backurl;
+	}
+}
+
+function contentList(){
+    contents = [];
+	initContentShow();
+	var params= "key=L_"+menuObj.dataList[menuObj.position].id+"_${rgnCode}_json_"+menuObj.dataList[menuObj.position].id+"_"+curPage;
+	new Ajax.Request('dataEnginerServlet',{
+		method:"post",
+		parameters: params,
+		onSuccess:function(transport){
+			var response = transport.responseText;
+			var data = eval("("+response+")");
+			contents = data.dataList;
+			
+			totalPage = data.totalPage;
+			if (totalPage == "1"){
+			   $("prePage").src = "{respath}/images/stop.png";
+			   $("nextPage").src = "{respath}/images/stop.png";
+			}
+		    showContentList();
+        },
+		onFailure: function(transport){
+		}
+	});
+
+}
+
+function showContentList(){
+     var length = contents.length; 
+	if(length > 10) length = 10;
+	contentObj = new showList(length, contents.length, 0, 42, window);
+	contentObj.dataList = contents;
+	contentObj.position = contentDataPos;
+	contentObj.focusPos = contentPos;
+	contentObj.showLoop = false;
+	contentObj.focusLoop = false;
+	contentObj.haveData = function(obj){
+	     $("item"+obj.idPos).style.background = "url({respath}/images/item.png) no-repeat";
+		 var posterUrl = "res/content/small/"+contentObj.dataList[obj.dataPos].smallpic;
+		 $("item_poster"+obj.idPos).innerHTML =  "<img src='"+posterUrl+"' width='188' height='148'/>";
+		 var title = contentObj.dataList[obj.dataPos].title;
+		 $("item_name"+obj.idPos).innerHTML = maqFmtCutStr(title,14);
+		 $("item_price"+obj.idPos).innerHTML = contentObj.dataList[obj.dataPos].ext1+"元";
+		
+	};
+	contentObj.notData = function (obj){
+	      $("item"+obj.idPos).style.background = "url()";
+		 $("item_poster"+obj.idPos).innerHTML = "";
+		 $("item_name"+obj.idPos).innerHTML = "";
+		 $("item_price"+obj.idPos).innerHTML = "";
+	};
+	contentObj.startShow();
+}
+
+function maqFmtCutStr(str,num){
+	var strlength = 0;
+	for(var i=0;i<str.length;i++){ 
+		var intcode=str.charCodeAt(i);
+		if(intcode>=0 && intcode<=128) {
+			strlength+=1;
+		}else{
+			strlength+=2;
+		}
+	}
+	if(strlength>num){
+		return "<marquee>"+str+"</marquee>";
+	}else {
+		return str;
+	}
+}
+	
+function getThisUrl(){
+	var lastUrl = encodeURIComponent("${(backurl)?default('')}");
+	return encodeURIComponent("dataEnginerServlet?key="+getDataKey()+"&backurl="+lastUrl);
+}
+
+
+function initContentShow(){
+   for (var i=0;i<10;i++){
+       $("item"+i).style.background = "url()";
+		 $("item_poster"+i).innerHTML = "";
+		 $("item_name"+i).innerHTML = "";
+		 $("item_price"+i).innerHTML = "";
+   }
+}
+
+function submitBtnEffect(){
+    if (focusPos == "SUBMIT"){
+	   $("submitBtn").style.background = "url({respath}/images/btn_hl.png) no-repeat";
+	   $("submitBtn").style.color = "#000000";
+	}else {
+	   $("submitBtn").style.background = "url({respath}/images/btn.png) no-repeat";
+	   $("submitBtn").style.color = "#ffffff";
+	}
+}
+function selectBtnEffect(){
+    if (focusPos == "SELECT"){
+	   $("selectBtn").style.background = "url({respath}/images/btn_hl.png) no-repeat";
+	   $("selectBtn").style.color = "#000000";
+	}else {
+	   $("selectBtn").style.background = "url({respath}/images/btn.png) no-repeat";
+	   $("selectBtn").style.color = "#ffffff";
+	}
+}
+
+function contentEffect(){
+	 if (focusPos == "MENU"){
+		$("menu"+menuObj.focusPos).style.background = "url({respath}/images/tab--.png) no-repeat";
+	 }else{
+		$("menu"+menuObj.focusPos).style.background = "url({respath}/images/tab_hl.png) no-repeat";
+	 }
+     if (focusPos == "ITEM"){
+		 $("item"+contentObj.lastFocusPos).style.background = "url({respath}/images/item.png)";
+		 $("item_price"+contentObj.lastFocusPos).style.color = "#FFCC66";
+		 $("item"+contentObj.focusPos).style.background = "url({respath}/images/item_hl.png)";
+		 $("item_price"+contentObj.focusPos).style.color = "#333333";
+	 }else {
+	     $("item"+contentObj.lastFocusPos).style.background = "url({respath}/images/item.png)";
+		 $("item_price"+contentObj.lastFocusPos).style.color = "#FFCC66";
+		 $("item"+contentObj.focusPos).style.background = "url({respath}/images/item.png)";
+		 $("item_price"+contentObj.focusPos).style.color = "#FFCC66";
+	 }
+}
+function confirmBtnEffect(){
+     if (focusPos == "CONFIRM"){
+	   $("confirm_btn").style.background = "url({respath}/images/add_hl.png) no-repeat";
+	   $("confirm_btn").style.color = "#000000";
+	}else {
+	   $("confirm_btn").style.background = "url({respath}/images/add.png) no-repeat";
+	   $("confirm_btn").style.color = "#ffffff";
+	}
+}
+function backBtnEffect(){
+     if (focusPos == "BACK"){
+	   $("back_btn").style.background = "url({respath}/images/btn_hl.png) no-repeat";
+	   $("back_btn").style.color = "#000000";
+	}else {
+	   $("back_btn").style.background = "url({respath}/images/btn.png) no-repeat";
+	   $("back_btn").style.color = "#ffffff";
+	}
+}
+function alertBtnEffect(){
+     if (focusPos == "alert_left"){
+	   $("btn_left").style.background = "url({respath}/images/long_btn_hl.png) no-repeat";
+	}else {
+	   $("btn_left").style.background = "url({respath}/images/long_btn.png) no-repeat";
+	}
+	 if (focusPos == "alert_right"){
+	   $("btn_right").style.background = "url({respath}/images/btn_hl.png) no-repeat";
+	}else {
+	   $("btn_right").style.background = "url({respath}/images/btn.png) no-repeat";
+	}
+}
+
+if(DMX.Browser.Coship){
+	document.onkeypress= grabEvent;
+ }else{
+	document.onkeydown= grabEvent;
+}
+function grabEvent(){
+	var kcode = event.which || event.keyCode;
+	switch (kcode) {
+		case KEY.UP:
+		   if (focusPos == "MENU"){
+		     focusPos = "SUBMIT";
+			 submitBtnEffect();
+			 $("menu"+menuObj.focusPos).style.background = "url({respath}/images/tab_hl.png) no-repeat";
+		     break;
+		   }
+		   if (focusPos == "ITEM"){
+		    if (contentObj.focusPos >= 5){
+			     contentObj.changeList(-5);
+				 contentEffect();	
+			 }else {
+		        focusPos = "MENU";
+			     contentEffect();
+			 }
+			 break;
+		   }
+		   if (focusPos == "CONFIRM" || focusPos == "BACK"){
+		       var num = $("info_num").innerText;
+			   if (parseInt(num)>=99){
+			     focusPos = "DEL";
+				 $("numfocus").style.left = "590px";
+			   }else {
+				  focusPos = "ADD";
+				   $("numfocus").style.left = "715px";
+			  }
+			      show("numfocus");
+				  confirmBtnEffect();
+				  backBtnEffect();
+			  break;
+		   }
+		break;
+		case KEY.DOWN:
+			 if (focusPos == "SUBMIT" || focusPos == "SELECT"){
+				 focusPos = "MENU";
+				 submitBtnEffect();
+				 selectBtnEffect();
+				 $("menu"+menuObj.focusPos).style.background = "url({respath}/images/tab--.png) no-repeat";
+				 break;
+		    }
+		    if (focusPos == "MENU"){
+			    focusPos = "ITEM";
+				contentEffect();
+				break;
+			}
+			if (focusPos == "ITEM"){
+			    if(contentObj.focusPos<=5 && contentObj.focusPos+5>=contentObj.dataSize){
+					break;
+				}
+				if(contentObj.focusPos<=5){
+					contentObj.changeList(5);
+					contentEffect();									
+				}	
+				break;
+			}
+			if (focusPos == "ADD" || focusPos == "DEL"){
+			   focusPos = "CONFIRM";
+			   hide("numfocus");
+			   confirmBtnEffect();
+			   break;
+			}
+		break;
+		case KEY.LEFT:
+			 if (focusPos == "MENU"){
+		         menuObj.focusUp();
+				 menuEffect();
+		        break;
+		    }
+			if (focusPos == "SELECT"){
+			    focusPos = "SUBMIT";
+				submitBtnEffect();
+			    selectBtnEffect();
+				break;
+			}
+			if (focusPos == "ITEM"){
+			    contentObj.focusUp();
+				contentEffect();
+				break;
+			}
+			if (focusPos == "BACK"){
+				focusPos = "CONFIRM";
+				confirmBtnEffect();
+				backBtnEffect();
+				break;
+			}
+			if (focusPos == "ADD"){
+			   var num = $("info_num").innerText;
+			   if (parseInt(num)>1){
+			     focusPos = "DEL";
+				 $("numfocus").style.left = "590px";
+			   }
+			    break;
+			}
+			if (focusPos == "alert_right"){
+			   focusPos = "alert_left";
+			   alertBtnEffect();
+			   break;
+			}
+		break;
+		case KEY.RIGHT:
+			 if (focusPos == "MENU"){
+		         menuObj.focusDown();
+				 menuEffect();
+		         break;
+		   }
+		   if (focusPos == "SUBMIT"){
+			    focusPos = "SELECT";
+				submitBtnEffect();
+			    selectBtnEffect();
+				break;
+			}
+			if (focusPos == "ITEM"){
+			    contentObj.focusDown();
+				contentEffect();
+				break;
+			}
+			if (focusPos == "CONFIRM"){
+			   focusPos = "BACK";
+			   confirmBtnEffect();
+			   backBtnEffect();
+			   break;
+			}
+			if (focusPos == "DEL"){
+			   var num = $("info_num").innerText;
+			   if (parseInt(num)<99){
+			     focusPos = "ADD";
+				 $("numfocus").style.left = "715px";
+			   }
+			    break;
+			}
+			if (focusPos == "alert_left"){
+			   focusPos = "alert_right";
+			   alertBtnEffect();
+			   break;
+			}
+		break;
+		case KEY.ENTER:
+			if (focusPos == "ITEM"){
+			   focusPos = "CONFIRM";
+			   $("info_poster").src = "res/content/small/"+contentObj.dataList[contentObj.position].smallpic;
+			   $("info_name").innerHTML = contentObj.dataList[contentObj.position].title;
+			   $("info_price").innerHTML = contentObj.dataList[contentObj.position].ext1+"元";
+			   $("info_num").innerHTML = "1";
+			   confirmBtnEffect();
+			   backBtnEffect();
+			   show("info_alert");
+			   break;
+			}
+			if (focusPos == "ADD"){
+			   var num = $("info_num").innerText;
+			    $("info_num").innerHTML = parseInt(num)+1;
+			   if (parseInt(num) == 98){
+			      focusPos = "DEL";
+				  $("numfocus").style.left = "590px";
+			      $("info_num").style.background = "url({respath}/images/left.png) no-repeat";
+			   }else {
+			      $("info_num").style.background = "url({respath}/images/middle.png) no-repeat";
+			   }
+			   break;
+			}
+			if (focusPos == "DEL"){
+			   var num = $("info_num").innerText;
+			    $("info_num").innerHTML = parseInt(num)-1;
+			   if (parseInt(num) == 2){
+			      focusPos = "ADD";
+				  $("numfocus").style.left = "715px";
+			      $("info_num").style.background = "url({respath}/images/right.png) no-repeat";
+			   }else {
+			      $("info_num").style.background = "url({respath}/images/middle.png) no-repeat";
+			   }
+			   break;
+			}
+			if (focusPos == "CONFIRM"){
+			  addShopCart();
+			  show("msg_alert");
+			  focusPos = "alert_right";
+			  alertBtnEffect();
+			  closeInfoAlert();
+			  break;
+			}
+			if (focusPos == "BACK" || focusPos == "alert_right"){
+				focusPos = "ITEM";
+				closeInfoAlert();
+				closeMsgAlert();
+				break;
+			}
+			if (focusPos == "alert_left" || focusPos == "SUBMIT"){
+			    window.location.href = "dataEnginerServlet?key=L_${categoryId}_${rgnCode}_cart_${categoryId}_1&backurl="+getThisUrl();
+				break;
+			}
+			if (focusPos == "SELECT"){
+			    window.location.href = "dataEnginerServlet?key=L_${categoryId}_${rgnCode}_order_${categoryId}_1&backurl="+getThisUrl();
+				break;
+			}
+		break;
+		case KEY.PAGEUP:
+			prePage();
+			break;
+		case KEY.PAGEDOWN:
+			nextPage();
+			break;
+		case KEY.BACK:
+			if(focusPos == "BACK"||focusPos=="CONFIRM"||focusPos == "alert_right"||focusPos=="alert_left"){
+				focusPos = "ITEM";
+				closeInfoAlert();
+				closeMsgAlert();
+				return 0;
+			}else{
+				toGoBack();
+				return 0;
+			}
+		break;
+	}
+}
+
+function prePage(){
+   if(curPage>1){
+	 curPage--;
+	 contentList();
+	}
+}
+
+function nextPage(){
+  if(curPage<totalPage){
+	curPage++;
+	contentList();
+  }
+}
+
+function closeInfoAlert(){
+  hide("info_alert");
+  $("info_poster").src = "";
+  $("info_name").innerHTML = "";
+  $("info_price").innerHTML = "";
+  $("info_num").innerHTML = "1";
+  $("info_num").style.background = "url({respath}/images/right.png) no-repeat";
+}
+function closeMsgAlert(){
+   hide("msg_alert");
+   alertBtnEffect();
+}
+function addShopCart(){
+    var obj = new Object();
+	var num = $("info_num").innerText;
+	var price  = contentObj.dataList[contentObj.position].ext1
+	var title = contentObj.dataList[contentObj.position].title;
+	obj.dishName = encodeURI(encodeURI(title));
+	obj.dishId = contentObj.dataList[contentObj.position].id;
+	obj.price = parseFloat(price);
+	obj.disNum = parseInt(num);
+  
+	setCookie("DMX_"+obj.dishId,JSON.stringify(obj));
+}
+</script>
+
+</head>
+																
+<body onload="load();" bgcolor="transparent" style="margin:0; padding:0; font-size:26px; background:url({respath}/images/bg.jpg) no-repeat left top; color:#FFFFFF; font-family:'黑体';">
+<img src="{respath}/images/logo.png" style="position:absolute;left:50px; top:20px;" />
+<img src="{respath}/images/logo2.png" style="position:absolute;left:1015px; top:42px;" />
+<div id="submitBtn" style="position:absolute; left:630px; top:36px; width:156px; height:50px; color:#ffffff; text-align:center; line-height:52px; background:url({respath}/images/btn.png) no-repeat">购物车</div>
+<div id="selectBtn" style="position:absolute; left:830px; top:36px; width:156px; height:50px; color:#ffffff; text-align:center; line-height:52px; background:url({respath}/images/btn.png) no-repeat">查看订单</div>
+<!--菜单 -->
+<div style="position:absolute;left:120px;top:118px;width:1022px; height:54px;color:#ffffff; text-align:center; line-height:56px; margin-left:auto; margin-right:auto;">
+<div id="menu0" style=" float:left; margin-left:10px; width:160px; height:54px;"></div>
+<div id="menu1" style=" float:left; margin-left:10px; width:160px; height:54px;"></div>
+<div id="menu2" style=" float:left; margin-left:10px; width:160px; height:54px;"></div>
+<div id="menu3" style=" float:left; margin-left:10px; width:160px; height:54px;"></div>
+<div id="menu4" style=" float:left; margin-left:10px; width:160px; height:54px;"></div>
+<div id="menu5" style=" float:left; margin-left:10px; width:160px; height:54px;"></div>
+</div>
+
+<!--内容列表 -->
+<div style="position:absolute; left:120px; top:187px; width: 1038px; height:245px;">
+  <div id="item0" style="position:absolute; left:0px; width:202px; height:245px;">
+    <div id="item_poster0" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name0" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price0" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+</div>
+	
+  <div id="item1" style="position:absolute; left:210px; width:202px; height:245px;">
+    <div id="item_poster1" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name1" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price1" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+     </div>
+	
+  <div id="item2" style="position:absolute; left:420px; width:202px; height:245px;">
+    <div id="item_poster2" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name2" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price2" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+     </div>
+
+  <div id="item3" style="position:absolute; left:630px; width:202px; height:245px;">
+    <div id="item_poster3" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name3" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price3" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+    </div>	
+	
+  <div id="item4" style="position:absolute; left:840px; width:202px; height:245px;">
+    <div id="item_poster4" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name4" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price4" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+    </div>	
+	
+</div>
+
+<div style="position:absolute; left:120px; top:440px; width: 1038px; height:245px;">
+  <div id="item5" style="position:absolute; left:0px; width:202px; height:245px;">
+    <div id="item_poster5" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name5" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price5" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+</div>
+	
+  <div id="item6" style="position:absolute; left:210px; width:202px; height:245px;">
+    <div id="item_poster6" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name6" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price6" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+    </div>
+	
+  <div id="item7" style="position:absolute; left:420px; width:202px; height:245px;">
+    <div id="item_poster7" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name7" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price7" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+   </div>
+
+  <div id="item8" style="position:absolute; left:630px; width:202px; height:245px;">
+    <div id="item_poster8" style="position:absolute; left:7px; top:6px;" /></div>
+    <div id="item_name8" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price8" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+   </div>	
+	
+  <div id="item9" style="position:absolute; left:840px; width:202px; height:245px;">
+    <div id="item_poster9" style="position:absolute; left:7px; top:6px;" ></div>
+    <div id="item_name9" style="position:absolute; left:7px; top: 160px; width: 188px; height:40px; line-height:40px; text-align:center;"></div>
+	<div id="item_price9" style="position:absolute; left:7px; top: 200px; width: 188px; height:40px;line-height:40px; text-align:center; color: #FFCC66;"></div>
+</div>	
+	
+</div>
+
+<!-- 翻页 -->
+  <img id="prePage" src="{respath}/images/stop.png" style="position:absolute; left:50px; top:371px; width:64px; height:64px;" />
+  <img id="nextPage" src="{respath}/images/next.png" style="position:absolute; left:1172px; top:371px; width:64px; height:64px;" />
+  
+  
+<div id="info_alert" style="z-index:10;position:absolute;left:188px;top:213px;width:928px;height:417px; font-size:32px; background:url({respath}/images/info_bg.png) no-repeat; color:#000000; visibility:hidden;">
+   <img id="info_poster" src="{respath}/images/pic.jpg" width="361" height="293" style="position:absolute; left:30px; top:35px; width: 378px; height: 301px;border:3px solid #adc1cc;" />
+   <div id="info_name" style="position:absolute;top:35px; width:453px; height:90px; left: 425px; line-height:45px; text-align:left;"></div>
+   <hr width=80% size=1 color="#adc1cc" style="position:absolute;top:120px; width:457px; height:1px; left: 425px;border:1 dashed #adc1cc;"> 
+   <div style="position:absolute;top:158px; width:457px; height:40px; left: 428px;line-height:45px; text-align:left; color:#333333;">单   价：<span id="info_price" style="position:absolute; top:2px; color:#FF9900; font-size:40px;"></span></div>
+  <div style="position:absolute; top:229px; width:163px; height:40px; left: 425px; text-align:left; color:#333333;">购买数量：</div>
+   <div id="info_num" style="position:absolute; left: 591px; top: 224px; width:172px; height:46px; background:url({respath}/images/right.png) no-repeat; line-height:46px; text-align:center;">1</div>
+   <div id="numfocus" style="position:absolute;left:715px; top:223px; width:50px; height:50px; visibility:hidden;"><img src="{respath}/images/hl.png" /></div>
+   <div id="confirm_btn" style="position:absolute;left:425px; top:300px;  width:190px; height:50px; color:#000000; font-size:28PX; text-align:center; line-height:50px; background:url({respath}/images/add_hl.png) no-repeat">加入购物车</div>
+   <div id="back_btn" style="position:absolute;left:637px; top:300px;  width:156px; height:50px; color:#ffffff; font-size:28PX; text-align:center; line-height:50px; background:url({respath}/images/btn.png) no-repeat">返回</div>
+   
+</div>
+
+  <div id="msg_alert" style="z-index:10;position:absolute;left:380px;top:220px;width:515px;height:258px; font-size:32px; background:url({respath}/images/alert.png) no-repeat; color:#000000; visibility:hidden;">
+   <div id="alert_text" style="position:absolute;top:63px; width:415px; height:49px; left: 56px; text-align:center; font-size:42px;">添加成功！</div>
+   <div id="btn_left" style="position:absolute;left:60px; top:164px;  width:214px; height:50px; color:#ffffff; text-align:center; font-size:28px; line-height:50px; background:url({respath}/images/long_btn.png) no-repeat">去购物车结算</div>
+   <div id="btn_right" style="position:absolute;left:300px; top:164px;  width:156px; height:50px; color:#ffffff; text-align:center; font-size:28px; line-height:50px; background:url({respath}/images/btn_hl.png) no-repeat">继续购物</div>
+</div>  
+  
+</body>
+
+</html>
+

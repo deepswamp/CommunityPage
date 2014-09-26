@@ -1,0 +1,996 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="1280*720 text/html; charset=UTF-8" />
+<title>居家养老点餐</title>
+<script type="text/javascript" src="res/js/showlist.js"></script>
+<script type="text/javascript" src="res/js/key.js"></script>
+<script type="text/javascript" src="res/js/showSlip.js"></script>
+<script type="text/javascript" src="res/js/ajax.js"></script>
+<script type="text/javascript" src="res/js/util.js"></script>
+<script type="text/javascript" src="res/js/dmxdate.js"></script>
+<script type="text/javascript" src="res/js/json2.js"></script>
+<script language="javascript" type="text/javascript">
+var focusPos = "";
+var oderFocusPos = "";
+var menus =  [];
+var condition="lunch";
+var menuObj;
+var dateCateId;
+var selectcai=0;
+var submitflag=false;
+var selectMoney=0;
+var selectSum=1;
+var totalMoney=0;
+var totalpage=0;
+var currentpage=0;
+var dateItems = [
+        {id:"230059",name:"星期日",date:""},
+		{id:"230053",name:"星期一",date:""},
+		{id:"230054",name:"星期二",date:""},
+		{id:"230055",name:"星期三",date:""},
+		{id:"230056",name:"星期四",date:""},
+		{id:"230057",name:"星期五",date:""},
+		{id:"230058",name:"星期六",date:""}
+	];
+var menuCateItems=[
+{id:"230007",name:"套餐"}
+];
+var newDateItems = [];
+	
+var dateObj;
+var datePos = 0;
+
+var initFlag = true;
+var curFocusDate = 0;
+
+var contents = [];
+var contentObj;
+
+var curPage = 1;
+var totalpage = 1;
+var totalSize = 0;
+var PAGESIZE = 3;
+
+var seconds = [];
+var secondObj;
+var menuPos = 0;
+
+var order0 = [];
+var order1 = [];
+
+//页面加载完执行
+function load(){
+	//插入当前日期
+	//$("today").innerHTML = dmxdate.getFmtDate(new Date());
+	//$("menufocus").style.top = 105+menuPos*164+"px";
+	focusPos = "MENU";
+	initDates();
+	hide("up");
+}
+
+function initDates(){
+	var data = getSystemDateResponse();
+	var time=data.getSystemDateResponse.dateTime;
+	var year=time.substring(0,4);
+	var month=time.substring(4,6);
+	var day=time.substring(6,8);
+	var hour=time.substring(8,10);
+	var min=time.substring(10,12);
+	var sec=time.substring(12,14);
+	var currDate=new Date(year+"/"+month+"/"+day+" "+hour+":"+min+":"+sec);
+    var week = currDate.getDay();
+	dateCateId=dateItems[week].id;
+	menuList();
+}
+
+
+function menuList(){
+	var params= "key=L_${categoryId}_${rgnCode}_json_${categoryId}_1";
+	new Ajax.Request('dataEnginerServlet',{
+		method:"post",
+		parameters: params,
+		onSuccess:function(transport){
+			var response = transport.responseText;
+			var data = eval("("+response+")");
+			menus = data;
+			showMenu();
+			menuEffect();
+			
+		},
+		onFailure: function(transport){
+		}
+	});
+}
+
+function showMenu(){
+	var length = menus.length; 
+	if(length > 2) length = 2;
+	menuObj = new showList(length, menus.length, 0, 42, window);
+	menuObj.dataList = menus;
+	menuObj.position = menuPos;
+	menuObj.focusPos = menuPos;
+	menuObj.showLoop = false;
+	menuObj.haveData = function(obj){
+		show("menufocus");
+	};
+	menuObj.notData = function (obj){
+		
+	};
+	menuObj.startShow();
+	contentList();
+}
+
+function menuEffect(){
+	//$("menu"+menuObj.lastFocusPos).style.background = "url({respath}/images/second_on.png) no-repeat left top";
+	//$("menu"+menuObj.focusPos).style.background = "url({respath}/images/second.png) no-repeat left top";
+	if(focusPos=="MENU"){
+		$("menufocus").style.top = 169+menuObj.focusPos*170+"px";
+		show("menufocus");
+	}
+}
+
+function contentList(){
+	var params= "key=L_"+dateCateId+"_${rgnCode}_json_"+dateCateId+"_1";
+	currentpage=1;
+	totalpage=0;
+	new Ajax.Request('dataEnginerServlet',{
+		method:"post",
+		parameters: params,
+		onSuccess:function(transport){
+			var response = transport.responseText;
+			var data = eval("("+response+")");
+			contents = data.dataList;
+			
+			totalSize = data.totalSize;
+			if (totalSize <= PAGESIZE){
+			  //
+			}
+			
+			for (var i=0;i<contents.length;i++){
+			   contents[i].status = "n";
+			   if(i%3==0){
+					totalpage++;
+			   }
+			}
+			if(totalpage==0){
+				totalpage=1;
+			}
+			 $("cupage").innerHTML = currentpage;
+			 $("topage").innerHTML = totalpage;
+		    showContentList();
+		},
+		onFailure: function(transport){
+		}
+	});
+
+}
+
+function showContentList(){
+     var length = contents.length; 
+	if(length > 3) length = 3;
+	contentObj = new showList(length, contents.length, 0, 42, window);
+	contentObj.dataList = contents;
+	contentObj.position = 0;
+	contentObj.focusPos = 0;
+	contentObj.showLoop = false;
+	contentObj.focusLoop = false;
+	contentObj.haveData = function(obj){
+		 $("content_poster"+obj.idPos).src = "res/content/big/"+contentObj.dataList[obj.dataPos].bigpic;
+		 $("content_name"+obj.idPos).innerHTML = contentObj.dataList[obj.dataPos].title;
+		 $("content_text"+obj.idPos).innerHTML = contentObj.dataList[obj.dataPos].ext1;
+		 if (contentObj.dataList[obj.dataPos].status == "y"){
+			 hide("discontent"+obj.idPos);
+		     $("content_status"+obj.idPos).style.visibility = "visible";
+		 }else {			
+		     $("content_status"+obj.idPos).style.visibility = "hidden";
+			 if(selectcai==4){
+				show("discontent"+obj.idPos);
+			 }else{
+				hide("discontent"+obj.idPos);
+			 }
+		 }
+	};
+	contentObj.notData = function (obj){
+		 $("content_poster"+obj.idPos).src = "";
+		 $("content_name"+obj.idPos).innerHTML = "";
+		 $("content_text"+obj.idPos).innerHTML = "";
+		 $("content_status"+obj.idPos).style.visibility = "hidden";
+	};
+	contentObj.startShow();
+}
+
+function contentEffect(){
+     if (focusPos == "CONTENT"){
+	 	show("contentfocus");
+		$("contentfocus").style.left = 330+contentObj.focusPos*270+"px";
+		$("content"+contentObj.focusPos).style.color = "black";
+	 }else {
+	    hide("contentfocus");
+	 }
+}
+
+function submitEffect(){
+    if (focusPos == "SUBMIT"){
+	   $("submit").style.background = "url({respath}/images/btnfocus.png) no-repeat left top";
+	   $("submit").style.color = "#ffffff";
+	}else {
+	   $("submit").style.background = "url({respath}/images/btn.png) no-repeat left top";
+	   $("submit").style.color = "#000000";
+	}
+}
+
+//页面关闭执行
+function exit(){
+	if(DMX.Browser.Tmall){
+		myJS.destroyInnerVideo();
+	}else if(DMX.Browser.Coship&&mp!=null){
+		mp.stop();
+	}
+}
+
+
+function initCaiStatus(){
+	for(var i=0;i<contentObj.dataList.length;i++){
+		contentObj.dataList[i].status = "n";
+	}
+}
+
+if(DMX.Browser.Coship){
+		document.onkeypress= grabEvent;
+	}else{
+		document.onkeydown= grabEvent;
+	}
+function grabEvent(){
+	var kcode = event.which || event.keyCode;
+	switch (kcode) {
+		case KEY.UP:
+			if (focusPos == "MENU"){
+			   menuObj.focusUp();
+			   menuEffect();
+			  // $("menu"+menuObj.lastFocusPos).style.background = "url({respath}/images/second_on.png) no-repeat left top";
+	           // $("menu"+menuObj.focusPos).style.background = "url({respath}/images/second.png) no-repeat left top";
+				curPage = 1;
+				contentList();
+			   break;
+			}
+			if (focusPos == "SUBMITORDER"){
+			   focusPos = "ADD"
+			   show("addfoucs2");
+			   hide("submitfoucs");
+			   break;
+			}
+			if (focusPos == "CANCELORDER"){
+			   focusPos = "ADD"
+			   show("addfoucs2");
+			   hide("cancelfoucs");
+			   break;
+			}
+			if (focusPos == "MINUS"){
+			   focusPos = "LANUCH"
+			   hide("addfoucs2");
+			   show("lselect");
+			   break;
+			}
+			if (focusPos == "ADD"){
+			   focusPos = "LANUCH"
+			   hide("addfoucs2");
+			   show("lselect");
+			   break;
+			}
+			if (focusPos == "CONTENT"){
+				show('down');
+				if(contentObj.position<3){
+					//上翻失效
+				}else{
+					currentpage--;
+					$("cupage").innerHTML = currentpage;
+					contentObj.changePosition(-3);
+					contentObj.showcurrList();
+				}
+				if(contentObj.position<3){
+					//上翻失效
+					hide('up');
+				}
+			  break;
+			}
+			if (focusPos == "SUBMIT"){
+				focusPos = "ORDER";
+				$("orderfocus").style.top = 389+"px";
+				break;
+			}
+			if (focusPos == "ORDER"){
+				if(submitflag){
+					focusPos = "SUBMIT";
+					$("orderfocus").style.top = 205+"px";
+				}
+				break;
+			}
+			
+		break;
+		case KEY.DOWN:
+			if (focusPos == "MENU"){
+			   menuObj.focusDown();
+			   menuEffect();
+			  // $("menu"+menuObj.lastFocusPos).style.background = "url({respath}/images/second_on.png) no-repeat left top";
+	          //  $("menu"+menuObj.focusPos).style.background = "url({respath}/images/second.png) no-repeat left top";
+				curPage = 1;
+				contentList();
+			   break;
+			}
+			if (focusPos == "ADD"){
+			   hide("addfoucs2");
+			   focusPos = "SUBMITORDER";
+			   show("submitfoucs");
+			   break;
+			}else if (focusPos == "MINUS"){
+			   hide("minusfoucs2");
+			   focusPos = "SUBMITORDER";
+			   show("submitfoucs");
+			   break;
+			}
+			if (focusPos == "LANUCH"){
+			   focusPos = "ADD"
+			   show("addfoucs2");
+			   hide("lselect");
+			   break;
+			}
+			
+			if (focusPos == "CONTENT"){
+				show('up');
+				var remain=totalSize%3;
+				var min=0;
+				if(remain==0){
+					min=totalSize-4;
+				}else{
+					min=totalSize-remain-1;
+				}
+				if(min<contentObj.position&&contentObj.position<totalSize){
+					//下翻失效
+				}else{					
+					if(remain==0){
+						//内容为3的倍数，直接换位置
+						if((totalSize-7)<contentObj.position&&contentObj.position<(totalSize-3)){							
+							hide("down");
+						}
+					}else{
+						//判断是不是倒数第二行，如果倒数第二行，判断焦点是否大于最后一行的个数，如果是则让焦点前移
+						if((totalSize-remain-4)<contentObj.position&&contentObj.position<(totalSize-remain)){
+							while(contentObj.focusPos>remain-1){
+							$("content"+contentObj.focusPos).style.color = "white";
+								contentObj.focusUp();
+							}	
+							contentEffect();							
+							hide("down");
+						}else{
+							
+						}	
+					}
+					currentpage++;
+					$("cupage").innerHTML = currentpage;
+					contentObj.changePosition(3);
+					contentObj.showcurrList();
+				}
+			  break;
+			}
+			if (focusPos == "SUBMIT"){
+				focusPos = "ORDER";
+			  $("orderfocus").style.top = 389+"px";
+			  break;
+			}
+			if (focusPos == "ORDER"){
+				if(submitflag){
+					focusPos = "SUBMIT";
+					$("orderfocus").style.top = 205+"px";
+				}
+				break;
+			}
+		break;
+		case KEY.LEFT:
+			if (focusPos == "ADD"){
+			   if(selectSum>1){
+					//跳到减数量
+					focusPos = "MINUS";
+					hide("addfoucs2");
+					show("minusfoucs2");
+			   }
+			   break;
+			}
+			if (focusPos == "MINUS"){
+				focusPos = "ADD";
+				show("addfoucs2");
+				hide("minusfoucs2");
+			    break;
+			}
+			if (focusPos == "CONTENT"){
+			   if (contentObj.position %3== 0){
+				//焦点此时在菜品最左侧，移至订单
+			    focusPos = "MENU";
+				menuEffect();
+				hide("contentfocus");
+				hide("pointto");			    
+			  }else {
+			    $("content"+contentObj.focusPos).style.color = "white";
+				contentObj.focusUp();
+				contentEffect();
+			  }
+			  break;
+			}
+			if (focusPos == "SUBMIT"){
+				focusPos = "CONTENT";
+				$("content"+contentObj.focusPos).style.color = "black";
+				hide("orderfocus");
+				show("contentfocus");
+				break;
+			}
+			if (focusPos == "ORDER"){
+				focusPos = "CONTENT";
+				$("content"+contentObj.focusPos).style.color = "black";
+				hide("orderfocus");
+				show("contentfocus");
+				break;
+			}
+			if (focusPos == "SUBMITORDER"){
+			   focusPos = "CANCELORDER";
+			   hide("submitfoucs");
+			   show("cancelfoucs");
+			   break;
+			}
+			if (focusPos == "CANCELORDER"){
+			   focusPos = "SUBMITORDER";
+			   hide("cancelfoucs");
+			   show("submitfoucs");
+			   break;
+			}
+		break;
+		case KEY.RIGHT:
+			if (focusPos == "MENU"){
+			   focusPos = "CONTENT";
+			   hide("menufocus");
+			   show("contentfocus");
+			   $("content"+contentObj.focusPos).style.color = "black";
+			   show("pointto");
+			   break;
+			}
+			if (focusPos == "ADD"){
+			   if(selectSum>1){
+					//跳到减数量
+					focusPos = "MINUS";
+					hide("addfoucs2");
+					show("minusfoucs2");
+			   }
+			   break;
+			}
+			if (focusPos == "SUBMITORDER"){
+			   focusPos = "CANCELORDER";
+			   hide("submitfoucs");
+			   show("cancelfoucs");
+			   break;
+			}
+			if (focusPos == "CANCELORDER"){
+			   focusPos = "SUBMITORDER";
+			   hide("cancelfoucs");
+			   show("submitfoucs");
+			   break;
+			}
+			if (focusPos == "MINUS"){
+				focusPos = "ADD";
+				show("addfoucs2");
+				hide("minusfoucs2");
+			   break;
+			}
+			if (focusPos == "CONTENT"){
+			  if (contentObj.position == totalSize-1||contentObj.position%3==2){
+			     //菜品选择到达本行最右侧，如果订单按钮可选，则将焦点右移至提交订单，否则按键失效
+				 if(submitflag){
+					focusPos="SUBMIT";
+					$("content"+contentObj.focusPos).style.color = "white";
+					$("orderfocus").style.top = 205+"px";
+					show("orderfocus");
+					hide("contentfocus");
+				 }else{
+					focusPos="ORDER";
+					$("content"+contentObj.focusPos).style.color = "white";
+					$("orderfocus").style.top = 389+"px";
+					show("orderfocus");
+					hide("contentfocus");
+				 }
+			  }else {
+				$("content"+contentObj.focusPos).style.color = "white";
+				  contentObj.focusDown();
+				  contentEffect();
+			  }
+			  break;
+			}
+			
+		break;
+		case KEY.ENTER:
+			if(focusPos=="MENU"){
+				menuList();
+			}else if(focusPos=="CONTENT"){
+				buyCai();
+			}else if(focusPos=="SUBMIT"){
+				focusPos="LANUCH";
+				submitOrderPre();				
+			}else if(focusPos=="ALERT"){
+				focusPos = oderFocusPos;
+				hide("alert");
+			}else if (focusPos == "ADD"){
+			   selectSum++;
+			   show("minusfoucs");
+			   $("totalsum").innerHTML=selectSum;
+			   totalMoney=selectMoney*selectSum;
+			   $("totalmoney").innerHTML=totalMoney+"元";
+			   break;
+			}else if (focusPos == "MINUS"){
+			   selectSum--;
+			   if(selectSum==1){
+					//选择1份不允许再减，自动跳到“+”
+					show("addfoucs2");
+					hide("minusfoucs2");
+					hide("minusfoucs");
+					focusPos ="ADD";
+			   }
+			   $("totalsum").innerHTML=selectSum;
+			   totalMoney=selectMoney*selectSum;
+			   $("totalmoney").innerHTML=totalMoney+"元";				
+			   break;
+			}else if (focusPos == "SUBMITORDER"){
+			   hide("submitfoucs");
+			   focusPos = "WAIT";
+			   submitOrder();			   
+			   break;
+			}else if (focusPos == "CANCELORDER"){
+				hide("cancelfoucs");
+				focusPos = "SUBMIT";
+				//show("contentfocus");
+			   $("orderdiv").style.display = "none";   
+			   break;
+			}else if (focusPos == "SUBMITRESULT"){
+				focusPos = "SUBMIT";
+				$("orderresultdiv").style.display = "none"; 
+				hide("cancelresultfoucs");
+			   break;
+			}else if (focusPos == "ORDER"){
+			    window.location.href = "dataEnginerServlet?key=L_230047_100010_order_230047_1&backurl="+getThisUrl();
+			    break;
+			}			
+		break;
+	}
+}
+function getThisUrl(){
+	var lastUrl = encodeURIComponent("${(backurl)?default('')}");
+	return encodeURIComponent("dataEnginerServlet?key="+getDataKey()+"&backurl="+lastUrl);
+}
+function getDataKey(){
+	var request = getRequestParam();
+	var key = request['key'];
+	if(key==""||key=="undefined"){
+		return "";
+	}
+	return key;
+}
+
+function submitOrderPre(){
+	selectSum=1;
+	totalMoney=selectMoney;
+	$("orderdiv").style.display = "block";
+	show("lselect");
+	$("totalsum").innerHTML="1";
+	$("totalmoney").innerHTML=selectMoney+"元";
+	for(var i =1;i<3;i++){
+		$("sucai"+i).innerHTML="";
+		$("fucai"+i).innerHTML="";
+		$("zhucai"+i).innerHTML="";
+	}
+	for(var i =3;i<5;i++){
+		$("sucai"+i).innerHTML="";
+	}
+	totalMoney=selectMoney;
+	var zcai=1;
+	var fcai=1;
+	var scai=1;
+	for(var i=0;i<contentObj.dataList.length;i++){
+		if(contentObj.dataList[i].status == "y"){
+			var object = new Object();
+			var title=contents[i].title;
+			var ext1=contents[i].ext1;
+			if(ext1=='素菜'){
+				$("sucai"+scai).innerHTML=title;
+				scai++;
+			}else if(ext1=='副菜'){
+				$("fucai"+fcai).innerHTML=title;
+				fcai++;
+			}else if(ext1=='主菜'){
+				$("zhucai"+zcai).innerHTML=title;
+				zcai++;
+			}
+		}
+	}
+}
+function submitOrder1(){
+	hide("subsuc");
+	hide("subfail");
+	$("orderdiv").style.display = "none";
+	$("orderresultdiv").style.display = "block";	
+	var data = getSystemDateResponse();
+	var time=data.getSystemDateResponse.dateTime;
+	var year=time.substring(0,4);
+	var month=time.substring(4,6);
+	var day=time.substring(6,8);
+	var hour=time.substring(8,10);
+	var min=time.substring(10,12);
+	var sec=time.substring(12,14);
+	var date=new Date(year+"/"+month+"/"+day+" "+hour+":"+min+":"+sec);
+	alert(date);
+	var dateDeadLine;
+	if(condition=="lunch"){
+	   dateDeadLine=new Date(year+"/"+month+"/"+day+" 10:30:00");
+	}else if(condition=="dinner"){
+	   dateDeadLine=new Date(year+"/"+month+"/"+day+" 16:30:00");
+	}
+	var datetimes = date.getTime();
+	var dateDeadLinetimes = dateDeadLine.getTime();
+	if (datetimes < dateDeadLinetimes) {
+		var obj = new Object();
+		obj.clientId = getCardId();//getUserId();
+		obj.condition = condition;
+		obj.roomTime = year+"-"+month+"-"+day;
+		obj.resFormat = "json";
+		obj.setPrice=selectMoney;
+		obj.setQuantity=selectSum;
+		obj.totalAmount=selectSum*selectMoney;
+		var tempArr = [];
+		obj.orders = tempArr;
+		for(var i=0,j=0;i<contentObj.dataList.length;i++){
+			if(contentObj.dataList[i].status == "y"){
+				var object = new Object();
+				tempArr[j]  = object;
+				tempArr[j].dishName = contents[i].title;
+				tempArr[j].dishId = contents[i].id;
+				tempArr[j].price = 0;
+				tempArr[j].quantity = 0;
+				var type = contentObj.dataList[i].ext1;
+				if(type=="素菜"){
+					tempArr[j].setType="vegetable";
+				}else if(type=="副菜"){
+					tempArr[j].setType="side";
+				}else if(type=="主菜"){
+					tempArr[j].setType="side";
+				}
+				j++;
+			}
+		}
+		alert(JSON.stringify(obj));
+		focusPos =  "SUBMITRESULT";
+		show("subsuc");			
+		show("cancelresultfoucs");
+	}else{
+		focusPos =  "SUBMITRESULT";
+		show("subfail");
+		show("cancelresultfoucs");		
+	}
+}
+//点餐记录列表
+function getSystemDateResponse(){
+	var params = {"getSystemDateResponse":{
+		"@attributes":{"code":"0","message":"成功"},
+		"dateTime":"20140826101200"}};
+	return params;
+}
+function submitOrder(){
+	hide("subsuc");
+	hide("subfail");
+	$("orderdiv").style.display = "none";
+	$("orderresultdiv").style.display = "block";
+	new Ajax.Request('http://127.0.0.1:8080/cms/thirdPartyPortalInterface/getSystemDate.service',{
+		method:"get",
+		parameters: "resFormat=json",
+		onSuccess:function(transport){
+			var response = transport.responseText;
+			if(response.indexOf("成功")>0){
+				var data = eval("("+response+")");
+				var time=data.getSystemDateResponse.dateTime;
+				var year=time.substring(0,4);
+				var month=time.substring(4,6);
+				var day=time.substring(6,8);
+				var hour=time.substring(8,10);
+				var min=time.substring(10,12);
+				var sec=time.substring(12,14);
+				var date=new Date(year+"/"+month+"/"+day+" "+hour+":"+min+":"+sec);
+				var dateDeadLine;
+				if(condition=="lunch"){
+				   dateDeadLine=new Date(year+"/"+month+"/"+day+" 17:30:00");
+				}else if(condition=="dinner"){
+				   dateDeadLine=new Date(year+"/"+month+"/"+day+" 16:30:00");
+				}
+				var datetimes = date.getTime();
+				var dateDeadLinetimes = dateDeadLine.getTime();
+				if (datetimes < dateDeadLinetimes) {
+					var obj = new Object();
+					obj.clientId = getCardId();//getUserId();
+					obj.condition = condition;
+					obj.roomTime = year+"-"+month+"-"+day;
+					obj.resFormat = "json";
+					obj.setPrice=selectMoney;
+					obj.setQuantity=selectSum;
+					obj.totalAmount=selectSum*selectMoney;
+					var tempArr = [];
+					obj.orders = tempArr;
+					for(var i=0,j=0;i<contentObj.dataList.length;i++){
+						if(contentObj.dataList[i].status == "y"){
+							var object = new Object();
+							tempArr[j]  = object;
+							tempArr[j].dishName = contents[i].title;
+							tempArr[j].dishId = contents[i].id;
+							tempArr[j].price = 0;
+							tempArr[j].quantity = 0;
+							var type = contentObj.dataList[i].ext1;
+							if(type=="素菜"){
+								tempArr[j].setType="vegetable";
+							}else if(type=="副菜"){
+								tempArr[j].setType="side";
+							}else if(type=="主菜"){
+								tempArr[j].setType="side";
+							}
+							j++;
+						}
+					}
+				    new Ajax.Request('http://127.0.0.1:8080/cms/thirdPartyPortalInterface/addUserOrder.service',{
+						method:"post",
+						parameters: "resFormat=json&order="+JSON.stringify(obj),
+						onSuccess:function(transport){
+							var response = transport.responseText;
+							if(response.indexOf("成功")>0){
+								show("subsuc");			
+								show("cancelresultfoucs");
+							}else{
+								show("subfail");
+								show("cancelresultfoucs");				
+							}
+							focusPos =  "SUBMITRESULT";
+						},
+						onFailure: function(transport){
+							focusPos =  "SUBMITRESULT";
+							show("subfail");
+							show("cancelresultfoucs");	
+						}
+					});
+				}else{
+					focusPos =  "SUBMITRESULT";
+					show("subfail");
+					show("cancelresultfoucs");		
+				}
+			}else{
+				show("subfail");
+				show("cancelresultfoucs");				
+			}
+			focusPos =  "SUBMITRESULT";
+		},
+		onFailure: function(transport){
+			focusPos =  "SUBMITRESULT";
+			show("subfail");
+			show("cancelresultfoucs");	
+		}
+	});
+}
+
+function buyCai(){
+	var status = contentObj.dataList[contentObj.position].status;
+	if (status == "y"){
+	   contentObj.dataList[contentObj.position].status = "n";
+	   $("content_status"+contentObj.focusPos).style.visibility = "hidden";
+	}else {
+		if(selectcai<4){
+			contentObj.dataList[contentObj.position].status = "y";
+		   $("content_status"+contentObj.focusPos).style.visibility = "visible";
+		}  
+	}
+	var sucai=0;
+	var fucai=0;
+	var zhucai=0;
+	var total=0;
+	for(var i=0;i<contentObj.dataList.length;i++){	
+		if(contentObj.dataList[i].status == "y"){
+			var object = new Object();
+			var ext1=contentObj.dataList[i].ext1;
+			total++;
+			if(ext1=='素菜'){
+				sucai++;
+			}else if(ext1=='副菜'){
+				fucai++;
+			}else if(ext1=='主菜'){
+				zhucai++;
+			}
+		}
+	}
+	submitflag=false;
+	selectMoney=0;
+	if(sucai==1&&fucai==1&&zhucai==0){
+		//8元套餐
+		submitflag=true;
+		$("money").innerHTML="8元";
+		selectMoney=8;
+	}else if(fucai==2&&zhucai==0&&sucai==1){
+		//10元套餐
+		submitflag=true;
+		$("money").innerHTML="10元";
+		selectMoney=10;
+	}else if(zhucai==1&&fucai==1&&sucai==1){
+		//15元套餐
+		submitflag=true;
+		$("money").innerHTML="15元";
+		selectMoney=15;
+	}else if(total==4){
+		//4个菜20元套餐
+		submitflag=true;
+		$("money").innerHTML="20元";
+		selectMoney=20;
+	}else{
+		$("money").innerHTML="";
+		selectMoney=0;
+	}
+	if(submitflag){
+		$("submit").style.color="black";
+	}else{
+		$("submit").style.color="gray";
+	}
+	selectcai=total;
+	contentObj.showcurrList();
+}
+
+function GetDateStr2(AddDayCount) {
+    var dd = new Date();
+    dd.setDate(dd.getDate()+AddDayCount);//获取AddDayCount天后的日期
+    var y = dd.getFullYear();
+    var m = dd.getMonth()+1;//获取当前月份的日期
+    var d = dd.getDate();
+	if(m<10){ m = "0"+m};		
+	if(d<10){ d = "0"+d};
+    return y+"-"+m+"-"+d;
+}
+
+</script>
+
+</head>
+																
+<body onload="load();" onunload="exit();" bgcolor="transparent" style="margin:0; padding:0; font-size:26px; background:url({respath}/images/BG.jpg) no-repeat left top; color:#00000; font-family:'黑体';">
+<img src="{respath}/images/LOGO.png" style="position:absolute;left:330px; top:33px;" />
+<img src="{respath}/images/Column.png" style="position:absolute;left:1015px; top:35px;" />
+<!-- 菜单-->
+<div id="menufocus" style="position:absolute; left:83px; top:169px; width:165px; height:55px; background:url({respath}/images/JD-1.png) no-repeat; visibility:hidden;"></div>
+<div id="pointto" style="position:absolute; left:260px; top:183px; width:25px; height:22px; background:url({respath}/images/PointTo.png) no-repeat;visibility:hidden;"></div>
+<div id="menu0" style="position:absolute; left:91px; top:177px; width:158px; height:41px; font-size:50px; font-weight:bold; background:url({respath}/images/Button-3.png) no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">套&nbsp;&nbsp;餐</div>
+</div>
+<div id="menu1" style="position:absolute; left:91px; top:227px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url({respath}/images/Button-3.png) no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">点&nbsp;&nbsp;菜</div>
+</div>
+<div id="menu1-1" style="position:absolute; left:91px; top:267px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url()no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">热&nbsp;&nbsp;菜</div>
+</div>
+<div id="menu1-2" style="position:absolute; left:91px; top:307px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url()no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">冷&nbsp;&nbsp;菜</div>
+</div>
+<div id="menu1-3" style="position:absolute; left:91px; top:347px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url()no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">主&nbsp;&nbsp;食</div>
+</div>
+<div id="menu1-4" style="position:absolute; left:91px; top:387px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url()no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">酒&nbsp;&nbsp;水</div>
+</div>
+<div id="tips" style="position:absolute; left:97px; top:448px; width:188px; height:202px; font-size:38px; font-weight:bold; background:url({respath}/images/Tagging.png) no-repeat;"></div>
+<!-- 内容 -->
+<div id="up" style="position:absolute; left:710px; top:140px; width:42px; height:46px; font-size:38px; font-weight:bold; background:url({respath}/images/up.png) no-repeat;"></div>
+<div id="down" style="position:absolute; left:710px; top:580px; width:45px; height:40px; font-size:38px; font-weight:bold; background:url({respath}/images/down.png) no-repeat;"></div>
+<div id="page" style="position:absolute; left:715px; top:620px; width:109px; height:36px; font-size:18px; font-weight:bold;">
+<span id="cupage" style="position:absolute; width:135px; left: -5px;  height: 27px;" ></span>
+<span id="spilt" style="position:absolute; width:135px; left: 8px;  height: 27px;" >/</span>
+<span id="topage" style="position:absolute; width:135px; left: 23px;  height: 27px;" ></span></div>
+<div id="orderfocus" style="position:absolute; left:1140px; top:205px; width:55px; height:202px; font-size:20px; font-weight:bold; background:url({respath}/images/JD-2.png) no-repeat;visibility:hidden;">
+</div>
+<div id="contentfocus" style="z-index:1;font-size:22px;color:#FFFFFF;position:absolute; left:330px; top:185px; width:264px; height:387px; background:url({respath}/images/Frame.png);visibility:hidden;"></div>
+<div id="content0" style="z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:330px; top:190px; width:264px; height:387px; background:url({respath}/{respath}/images/poster.png)"> 
+        <img src="" name="content_poster0" id="content_poster0" style="position:absolute;left:24px; top:25px;width:215px;height:265px;" />  
+	    <span id="content_name0" style="position:absolute; width:185px; left: 20px; top: 300px; height: 27px;" ></span>
+		<span id="content_text0" style="position:absolute; width:280px; left: 20px; top: 330px;" ></span>
+		<img id="content_status0" src="{respath}/images/Selected.png" style="z-index:3;position:absolute; left: 175px; top: 295px;" />
+</div>
+<div id="discontent0" style="visibility:hidden;z-index:3;font-size:22px;color:#FFFFFF;position:absolute; left:344px; top:205px; width:238px; height:347px; background:url({respath}/images/noselect.png)"></div>
+<div id="content1" style="z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:600px; top:190px; width:264px; height:387px; background:url({respath}/{respath}/images/poster.png)"> 
+        <img src="" name="content_poster1" id="content_poster1" style="position:absolute;left:24px; top:25px;width:215px;height:265px;" />  
+	    <span id="content_name1" style="position:absolute; width:185px; left: 20px; top: 300px; height: 27px;" ></span>
+		<span id="content_text1" style="position:absolute; width:280px; left: 20px; top: 330px;" ></span>
+		<img id="content_status1" src="{respath}/images/Selected.png" style="z-index:3;position:absolute; left: 175px; top: 295px;" />
+</div>
+<div id="discontent1" style="visibility:hidden;background:#cccccc;z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:615px; top:204px; width:238px; height:347px; background:url({respath}/images/noselect.png)"></div>
+<div id="content2" style="z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:870px; top:190px; width:264px; height:387px; background:url({respath}/{respath}/images/poster.png)"> 
+        <img src="" name="content_poster2" id="content_poster2" style="position:absolute;left:24px; top:25px;width:215px;height:265px;" />  
+	    <span id="content_name2" style="position:absolute; width:185px; left: 20px; top: 300px; height: 27px;" ></span>
+		<span id="content_text2" style="position:absolute; width:280px; left: 20px; top: 330px;" ></span>
+		<img id="content_status2" src="{respath}/images/Selected.png" style="z-index:3;position:absolute; left: 175px; top: 295px;visibility:hidden;" />
+</div>
+<div id="discontent2" style="visibility:hidden;z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:882px; top:204px; width:238px; height:347px; background:url({respath}/images/noselect.png)"></div>
+<div id="orderfocus" style="position:absolute; left:1140px; top:205px; width:55px; height:202px; font-size:20px; font-weight:bold; background:url({respath}/images/JD-2.png)no-repeat;visibility:hidden;">
+</div>
+
+<div id="submit" style="color:gray;position:absolute; left:1150px; top:211px; width:38px; height:202px; font-size:20px; font-weight:bold; background:url({respath}/images/Button-2.png) no-repeat;">
+<div style=" margin-top:12px;text-align:center;">提</div>
+<div style=" margin-top:12px;text-align:center;">交</div>
+<div style=" margin-top:12px;text-align:center;">订</div>
+<div style=" margin-top:12px;text-align:center;">单</div>
+</div>
+
+<div id="select" style="position:absolute; left:1150px; top:395px; width:38px; height:202px; font-size:20px; font-weight:bold; background:url({respath}/images/Button-2.png) no-repeat;">
+<div style=" margin-top:12px;text-align:center;">查</div>
+<div style=" margin-top:12px;text-align:center;">看</div>
+<div style=" margin-top:12px;text-align:center;">订</div>
+<div style=" margin-top:12px;text-align:center;">单</div>
+</div>
+<div id="alert" style="position:absolute;left:380px;top:220px;width:612px;height:303px; font-size:32px; background:url({respath}/images/tanchu.png) no-repeat; color:#000000; visibility:hidden;">
+   <div id="msg" style="position:absolute;top:40px; width:500px; height:40px; left: 50px; text-align:center;"></div>
+   <div id="alert_text" style="position:absolute;top:80px; width:500px; height:40px; left: 60px; text-align:center;"></div>
+   <div style="position:absolute; top:160px; width:536px; height:40px; left: 50px; text-align:center;">如有问题，请联系18602696817.</div>
+   <div id="alert_btn" style="position:absolute;left:230px; top:210px;  width:158px; height:52px; color:#ffffff; text-align:center; line-height:52px; background:url({respath}/images/btn.png) no-repeat">确定</div>
+
+</div>
+<div style="position:absolute; left: 1065px; top: 601px;" align="center"> <span id="money" style="font-weight:700; position:absolute; left: -13px; top: -3px; width: 82px;" ></span></div>
+<div id="orderdiv" style="display:none;z-index:4;position:absolute;left:3px;top:-1px;width:1277px;height:697px; font-size:19px; background:url({respath}/images/BG-2.png) no-repeat; color:#000000;">
+	<div id="zhucaise" style="position:absolute;top:258px; width:196px; height:128px; left: 318px; text-align:center;">
+		<span id="zhucai1" style="position:absolute; width:161px; left: 27px; top: 5px; height: 27px;" ></span>
+		<span id="zhucai2" style="position:absolute; width:161px; left: 27px; top: 30px; height: 27px;" ></span>
+	</div>
+	<div id="fucaise" style="position:absolute;top:258px; width:196px; height:128px; left: 538px; text-align:center;">
+		<span id="fucai1" style="position:absolute; width:161px; left: 25px; top: 5px; height: 27px;" ></span>
+		<span id="fucai2" style="position:absolute; width:161px; left: 25px; top: 30px; height: 27px;" ></span>
+	</div>
+	<div id="sucaise" style="position:absolute;top:258px; width:196px; height:128px; left: 752px; text-align:center;">
+		<span id="sucai1" style="position:absolute; width:161px; left: 21px; top: 5px; height: 27px;" ></span>
+		<span id="sucai2" style="position:absolute; width:161px; left: 21px; top: 30px; height: 27px;" ></span>
+		<span id="sucai3" style="position:absolute; width:161px; left: 21px; top: 55px; height: 27px;" ></span>
+		<span id="sucai4" style="position:absolute; width:161px; left: 21px; top: 80px; height: 27px;" ></span>
+	</div>
+	
+	<div style="font-weight:700;font-size:19px;z-index:7; position:absolute; left: 765px; top: 373px; background:url({respath}/images/Button-4.png) no-repeat; width: 85px; height: 29px;"      align="center">
+		<span id="lunch" style="position:absolute; width:58px; left: 14px; top: 4px; height: 20px;" >午餐</span></div>
+	<div style="font-weight:700;font-size:19px;z-index:7; position:absolute; left: 860px; top: 373px; background:url({respath}/images/Button-4-.png) no-repeat; width: 85px; height: 29px;" 					      align="center"> 
+	 	<span id="dinner" style="position:absolute; width:58px; left: 14px; top: 4px; height: 20px;" >晚餐</span></div>
+	<div id="lselect" style="visibility:show; font-weight:700;font-size:19px;z-index:5; position:absolute; left: 757px; top: 365px; background:url({respath}/images/Button-4-JD.png) no-repeat; width: 103px;height: 44px;" align="center"></div>
+	<div id="dselect" style="visibility:hidden; font-weight:700;font-size:19px;z-index:5; position:absolute; left: 852px; top: 365px; background:url({respath}/images/Button-4-JD.png) no-repeat; width: 103px;height: 44px;" align="center"></div>
+	<div id="delivertime" style="color:gray;font-size:14px;z-index:5; position:absolute; left: 416px; top: 389px; width:103px;height: 43px;" align="center">
+		<span id="lunchtime" style="position:absolute; width:83px; left: 14px; top: 4px; height: 20px;" >11:00-13:00</span>
+		<span id="dinnertime" style="position:absolute; width:83px; left: 14px; top: 24px; height: 20px;" >17:00-19:00</span>
+	</div>
+	<div id="minusfoucs" style="visibility:hidden; background:url({respath}/images/Reduction.png) no-repeat;color:gray;font-size:14px;z-index:5; position:absolute; left: 795px; top: 429px; width:55px;height: 30px;" align="center">	</div>
+	<div id="minusfoucs2" style="visibility:hidden; background:url({respath}/images/Reduction-2.png) no-repeat;color:gray;font-size:14px;z-index:5; position:absolute; left: 788px; top: 419px; width:55px;height: 30px;" align="center">	</div>
+	<div style="font-weight:700;font-size:23px;z-index:7; position:absolute; left: 812px; top: 414px;  width: 85px; height: 29px;"align="center"> 
+	 	<span id="totalsum" style="position:absolute; width:58px; left: 14px; top: 4px; height: 20px;" >1</span>
+	</div>
+	<div id="addfoucs" style=" background:url({respath}/images/Plus.png) no-repeat;color:gray;font-size:14px;z-index:5; position:absolute; left: 895px; top: 420px; width:103px;height: 43px;" align="center"></div>
+	<div id="addfoucs2" style="visibility:hidden; background:url({respath}/images/Plus-2.png) no-repeat;color:gray;font-size:14px;z-index:5; position:absolute; left: 887px; top: 409px; width:103px;height: 43px;" align="center">	</div>
+	<div style="font-weight:700;font-size:26px;z-index:7; position:absolute; left: 869px; top: 480px;  width: 85px; height: 29px;" align="center"> 
+	 	<span id="totalmoney" style="position:absolute; width:108px; left: 14px; top: 0px; height: 20px;" ></span>
+	</div>
+	<div style="background:url({respath}/images/Button.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 638px; top: 526px;  width: 158px; height: 42px;" align="center"> 
+	 	<span id="submitbutton" style="position:absolute; width:108px; left: 24px; top: 8px; height: 20px;" >确认提交</span>
+	</div>
+	<div id="submitfoucs" style="visibility:hidden;background:url({respath}/images/Button-S.png) no-repeat;font-weight:700;font-size:26px;z-index:6; position:absolute; left: 631px; top: 519px;  width: 178px; height: 57px;" align="center"></div>
+	<div style="background:url({respath}/images/Button.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 805px; top: 526px;  width: 158px; height: 42px;" align="center"> 
+	 	<span id="cancelbutton" style="position:absolute; width:108px; left: 25px; top: 8px; height: 20px;" >取&nbsp;&nbsp;消</span>	
+	</div>
+	<div id="cancelfoucs" style="visibility:hidden;background:url({respath}/images/Button-S.png) no-repeat;font-weight:700;font-size:26px;z-index:6; position:absolute; left: 798px; top: 519px;  width: 178px; height: 57px;" align="center"></div>
+</div>
+<div id="orderresultdiv" style="display:none;z-index:4;position:absolute;left:3px;top:-1px;width:1277px;height:697px; font-size:19px; background:url({respath}/images/BG-3.png) no-repeat; color:#000000;">
+	<div id="subsuc" style="visibility:hidden;background:url({respath}/images/sub-success.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 425px; top: 278px;  width: 474px; height: 100px;" align="center">	</div>
+	<div id="subfail" style="visibility:hidden;background:url({respath}/images/sub-fail.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 425px; top: 278px;  width: 474px; height: 100px;" align="center">	</div>
+	<div style="background:url({respath}/images/Button.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 805px; top: 526px;  width: 158px; height: 42px;" 					      align="center"> 
+	 	<span id="cancelresultbutton" style="position:absolute; width:108px; left: 25px; top: 8px; height: 20px;" >取&nbsp;&nbsp;消</span>
+	</div>
+	<div id="cancelresultfoucs" style="visibility:hidden;background:url({respath}/images/Button-S.png) no-repeat;font-weight:700;font-size:26px;z-index:6; position:absolute; left: 798px; top: 519px;  width: 178px; height: 57px;" align="center"></div>
+	</div>
+</div>
+</body>
+
+</html>
+
+
+                                        

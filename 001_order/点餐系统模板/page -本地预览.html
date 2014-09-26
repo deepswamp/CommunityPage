@@ -1,0 +1,562 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="1280*720 text/html; charset=UTF-8" />
+<title>居家养老点餐</title>
+<script type="text/javascript" src="res/js/showlist.js"></script>
+<script type="text/javascript" src="res/js/key.js"></script>
+<script type="text/javascript" src="res/js/showSlip.js"></script>
+<script type="text/javascript" src="res/js/ajax.js"></script>
+<script type="text/javascript" src="res/js/util.js"></script>
+<script type="text/javascript" src="res/js/dmxdate.js"></script>
+<script type="text/javascript" src="res/js/json2.js"></script>
+<script language="javascript" type="text/javascript">
+var focusPos = "";
+var oderFocusPos = "";
+var menus =  [];
+
+var menuObj;
+var dateCateId;
+var dateItems = [
+        {id:"230003",name:"星期日",date:""},
+		{id:"229997",name:"星期一",date:""},
+		{id:"229998",name:"星期二",date:""},
+		{id:"229999",name:"星期三",date:""},
+		{id:"230000",name:"星期四",date:""},
+		{id:"230001",name:"星期五",date:""},
+		{id:"230002",name:"星期六",date:""}
+	];
+var menuCateItems=[
+{id:"230007",name:"套餐"}
+]
+var newDateItems = [];
+	
+var dateObj;
+var datePos = 0;
+
+var initFlag = true;
+var curFocusDate = 0;
+
+var contents = [];
+var contentObj;
+
+var curPage = 1;
+var totalpage = 1;
+var totalSize = 0;
+var PAGESIZE = 2;
+
+var seconds = [];
+var secondObj;
+var menuPos = 0;
+
+var order0 = [];
+var order1 = [];
+
+//页面加载完执行
+function load(){
+	//插入当前日期
+	//$("today").innerHTML = dmxdate.getFmtDate(new Date());
+	//$("menufocus").style.top = 105+menuPos*164+"px";
+	focusPos = "MENU";
+	alert($("content_poster0").style);
+	initDates();
+}
+
+function initDates(){
+    var currDate = new Date();
+    var week = currDate.getDay();
+	dateCateId=dateItems[week].id;
+	menuList();
+}
+
+
+function menuList(){
+	var params= "key=L_${categoryId}_${rgnCode}_json_${categoryId}_1";
+	new Ajax.Request('dataEnginerServlet',{
+		method:"post",
+		parameters: params,
+		onSuccess:function(transport){
+			var response = transport.responseText;
+			var data = eval("("+response+")");
+			menus = data;
+			showMenu();
+			menuEffect();
+			
+		},
+		onFailure: function(transport){
+		}
+	});
+}
+
+function showMenu(){
+	var length = menus.length; 
+	if(length > 2) length = 2;
+	menuObj = new showList(length, menus.length, 0, 42, window);
+	menuObj.dataList = menus;
+	menuObj.position = menuPos;
+	menuObj.focusPos = menuPos;
+	menuObj.showLoop = false;
+	menuObj.haveData = function(obj){
+		show("menufocus");
+	};
+	menuObj.notData = function (obj){
+		
+	};
+	menuObj.startShow();
+	contentList();
+}
+
+function menuEffect(){
+	//$("menu"+menuObj.lastFocusPos).style.background = "url(images/second_on.png) no-repeat left top";
+	//$("menu"+menuObj.focusPos).style.background = "url(images/second.png) no-repeat left top";
+	if(focusPos=="MENU"){
+		$("menufocus").style.top = 169+menuObj.focusPos*170+"px";
+		show("menufocus");
+	}
+}
+
+function contentList(){
+	var params= "key=L_"+menuObj.dataList[menuObj.position].id+"_${rgnCode}_json_"+menuObj.dataList[menuObj.position].id+"_1";
+	new Ajax.Request('dataEnginerServlet',{
+		method:"post",
+		parameters: params,
+		onSuccess:function(transport){
+			var response = transport.responseText;
+			var data = eval("("+response+")");
+			contents = data.dataList;
+			
+			totalSize = data.totalSize;
+			if (totalSize <= PAGESIZE){
+			   $("nextPage").src = "iamges/stop.png";
+			}
+			
+			for (var i=0;i<contents.length;i++){
+			   contents[i].status = "n";
+			}
+		    showContentList();
+		},
+		onFailure: function(transport){
+		}
+	});
+
+}
+
+function showContentList(){
+     var length = contents.length; 
+	if(length > 2) length = 2;
+	contentObj = new showList(length, contents.length, 0, 42, window);
+	contentObj.dataList = contents;
+	contentObj.position = 0;
+	contentObj.focusPos = 0;
+	contentObj.showLoop = false;
+	contentObj.focusLoop = false;
+	contentObj.haveData = function(obj){
+		 $("content_poster"+obj.idPos).src = "res/content/small/"+contentObj.dataList[obj.dataPos].smallpic;
+		 $("content_name"+obj.idPos).innerHTML = contentObj.dataList[obj.dataPos].title;
+		 $("content_price"+obj.idPos).innerHTML = contentObj.dataList[obj.dataPos].ext1+"元";
+		 $("content_text"+obj.idPos).innerHTML = contentObj.dataList[obj.dataPos].ext2;
+		 if (contentObj.dataList[obj.dataPos].status == "y"){
+		 $("content_poster"+obj.idPos).style;
+		     $("content_status"+obj.idPos).style.visibility = "visible";
+		 }else {
+		     $("content_status"+obj.idPos).style.visibility = "hidden";
+		 }
+	};
+	contentObj.notData = function (obj){
+		 $("content_poster"+obj.idPos).src = "";
+		 $("content_name"+obj.idPos).innerHTML = "";
+		 $("content_price"+obj.idPos).innerHTML = "";
+		 $("content_text"+obj.idPos).innerHTML = "";
+		 $("content_status"+obj.idPos).style.visibility = "hidden";
+	};
+	contentObj.startShow();
+}
+
+function contentEffect(){
+     if (focusPos == "CONTENT"){
+		 $("content"+contentObj.lastFocusPos).style.background = "url(images/poster.png) no-repeat";
+		 $("content"+contentObj.focusPos).style.background = "url(images/posterfocus.png) no-repeat";
+	 }else {
+	     $("content"+contentObj.lastFocusPos).style.background = "url(images/poster.png) no-repeat left top";
+		 $("content"+contentObj.focusPos).style.background = "url(images/poster.png) no-repeat left top";
+	 }
+}
+
+function submitEffect(){
+    if (focusPos == "SUBMIT"){
+	   $("submit").style.background = "url(images/btnfocus.png) no-repeat left top";
+	   $("submit").style.color = "#ffffff";
+	}else {
+	   $("submit").style.background = "url(images/btn.png) no-repeat left top";
+	   $("submit").style.color = "#000000";
+	}
+}
+
+//页面关闭执行
+function exit(){
+	if(DMX.Browser.Tmall){
+		myJS.destroyInnerVideo();
+	}else if(DMX.Browser.Coship&&mp!=null){
+		mp.stop();
+	}
+}
+
+
+function initCaiStatus(){
+	for(var i=0;i<contentObj.dataList.length;i++){
+		contentObj.dataList[i].status = "n";
+	}
+}
+
+if(DMX.Browser.Coship){
+		document.onkeypress= grabEvent;
+	}else{
+		document.onkeydown= grabEvent;
+	}
+function grabEvent(){
+	var kcode = event.which || event.keyCode;
+	switch (kcode) {
+		case KEY.UP:
+			if (focusPos == "MENU"){
+			   menuObj.focusUp();
+			   menuEffect();
+			   $("menu"+menuObj.lastFocusPos).style.background = "url(images/second_on.png) no-repeat left top";
+	            $("menu"+menuObj.focusPos).style.background = "url(images/second.png) no-repeat left top";
+				curPage = 1;
+				contentList();
+			   break;
+			}
+			if (focusPos == "DATE"){
+			    focusPos = "SUBMIT";
+			    submitEffect();
+				hide("datefocus");
+			   break;
+			}
+			if (focusPos == "CONTENT"){
+			    focusPos = "DATE";
+				$("content"+contentObj.focusPos).style.background = "url(images/poster.png) no-repeat";
+			    dateMenuEffect();
+			  break;
+			}
+		break;
+		case KEY.DOWN:
+			if (focusPos == "MENU"){
+			   menuObj.focusDown();
+			   menuEffect();
+			   $("menu"+menuObj.lastFocusPos).style.background = "url(images/second_on.png) no-repeat left top";
+	            $("menu"+menuObj.focusPos).style.background = "url(images/second.png) no-repeat left top";
+				curPage = 1;
+				contentList();
+			   break;
+			}
+			if (focusPos == "DATE"){
+			    focusPos = "CONTENT";
+		        $("content"+contentObj.focusPos).style.background = "url(images/posterfocus.png) no-repeat";
+				hide("datefocus");
+				break;
+			}
+			if (focusPos == "SUBMIT"){
+			   focusPos = "DATE";
+			   dateMenuEffect();
+			   submitEffect();
+				break;
+			}
+		break;
+		case KEY.LEFT:
+			if (focusPos == "DATE"){
+			  if (dateObj.focusPos == 0){
+			    focusPos = "MENU";
+			    menuEffect();
+				hide("datefocus");
+			  }else {
+			  
+			   dateObj.focusUp();
+			   dateMenuEffect();
+			    $("date"+dateObj.lastFocusPos).style.background = "url(images/date.png) no-repeat left top";
+	            $("date"+dateObj.focusPos).style.background = "url(images/date_on.png) no-repeat left top";
+				$("date"+dateObj.lastFocusPos).style.color = "#ffffff";
+	            $("date"+dateObj.focusPos).style.color = "#000000";
+				curPage = 1;
+				menuList();
+			  }
+			   break;
+			}
+			if (focusPos == "CONTENT"){
+			  contentObj.focusUp();
+			  contentEffect();
+			   if (contentObj.position == 0){
+			      focusPos = "MENU";
+				  menuEffect();
+				  $("content"+contentObj.focusPos).style.background = "url(images/poster.png) no-repeat";
+			     //$("prePage").src = "images/stop.png";
+				 //$("nextPage").src = "images/next.png";
+			  }else {
+			    //$("prePage").src = "images/pre.png";
+				//$("nextPage").src = "images/next.png";
+			  }
+			  break;
+			}
+		break;
+		case KEY.RIGHT:
+			if (focusPos == "MENU"){
+			   focusPos = "DATE";
+			   dateMenuEffect();
+			   hide("menufocus");
+			   break;
+			}
+			if (focusPos == "DATE"){
+			   dateObj.focusDown();
+			   dateMenuEffect();
+			   $("date"+dateObj.lastFocusPos).style.background = "url(images/date.png) no-repeat left top";
+	            $("date"+dateObj.focusPos).style.background = "url(images/date_on.png) no-repeat left top";
+				$("date"+dateObj.lastFocusPos).style.color = "#ffffff";
+	            $("date"+dateObj.focusPos).style.color = "#000000";
+				curPage = 1;
+				menuList();
+			   break;
+			}
+			if (focusPos == "CONTENT"){
+			  contentObj.focusDown();
+			  contentEffect();
+			  if (contentObj.position == totalSize-1){
+			     $("nextPage").src = "images/stop.png";
+				 $("prePage").src = "images/pre.png";
+			  }else {
+			    $("nextPage").src = "images/next.png";
+				$("prePage").src = "images/pre.png";
+			  }
+			  break;
+			}
+		break;
+		case KEY.ENTER:
+			if(focusPos=="MENU"){
+				
+			}else if(focusPos=="DATE"){
+				
+			}else if(focusPos=="CONTENT"){
+				buyCai();
+			}else if(focusPos=="SUBMIT"){
+				show();
+				submitOrder();
+			}else if(focusPos=="ALERT"){
+				focusPos = oderFocusPos;
+				hide("alert");
+			}	
+		break;
+	}
+}
+
+
+function submitOrder(){
+	var obj = new Object();
+	obj.clientId = "1000598956";//getUserId();
+	obj.condition = menus[menuObj.position].name;
+	obj.roomTime = GetDateStr2(1);
+	obj.resFormat = "json";
+	var tempArr = [];
+	obj.orders = tempArr;
+	var tflag = false;
+	var totalPrice = 0;
+	for(var i=0,j=0;i<contentObj.dataList.length;i++){
+		if(contentObj.dataList[i].status == "y"){
+			var object = new Object();
+			tempArr[j]  = object;
+			tempArr[j].dishName = contents[i].title;
+			tempArr[j].dishId = contents[i].id;
+			var price = contentObj.dataList[i].ext1;
+			tempArr[j].price = price.substring(2,price.length);
+			j++;
+			tflag = true;
+			totalPrice  = totalPrice + parseInt(price.substring(2,price.length));
+		}
+	}
+	if(!tflag){
+		$("msg").innerHTML = "订单不能为空";
+		$("alert_text").innerHTML = "";
+		oderFocusPos = focusPos;
+		focusPos = "ALERT";
+		show("alert");
+		return ;
+	}
+	new Ajax.Request('thirdPartyPortalInterface/addUserOrder.service',{
+		method:"post",
+		parameters: "resFormat=json&order="+JSON.stringify(obj),
+		onSuccess:function(transport){
+			var response = transport.responseText;
+			if(response.indexOf("成功")>0){
+				$("msg").innerHTML = "尊敬的客人，您的点菜已成功";
+				if (obj.condition == "午餐"){
+				  $("alert_text").innerHTML = "送餐时间为"+dateObj.dataList[dateObj.position].date+dateObj.dataList[dateObj.position].name+"12点前，<br>餐费为"+totalPrice+"元";
+				}else {
+				  $("alert_text").innerHTML = "送餐时间为"+dateObj.dataList[dateObj.position].date+dateObj.dataList[dateObj.position].name+"6点前，<br>餐费为"+totalPrice+"元";
+				}
+			}else{
+				$("msg").innerHTML = "xxx老人,您的点菜提交失败，请稍后再试";
+				$("alert_text").innerHTML = "";
+			}
+			contentList();
+			oderFocusPos = focusPos;
+			focusPos = "ALERT";
+			show("alert");
+		},
+		onFailure: function(transport){
+		}
+	});
+}
+
+function buyCai(){
+	var status = contentObj.dataList[contentObj.position].status;
+	if (status == "y"){
+	   contentObj.dataList[contentObj.position].status = "n";
+	   $("content_status"+contentObj.focusPos).style.visibility = "hidden";
+	}else {
+	   contentObj.dataList[contentObj.position].status = "y";
+	   $("content_status"+contentObj.focusPos).style.visibility = "visible";
+	}
+}
+
+function GetDateStr2(AddDayCount) {
+    var dd = new Date();
+    dd.setDate(dd.getDate()+AddDayCount);//获取AddDayCount天后的日期
+    var y = dd.getFullYear();
+    var m = dd.getMonth()+1;//获取当前月份的日期
+    var d = dd.getDate();
+	if(m<10){ m = "0"+m};		
+	if(d<10){ d = "0"+d};
+    return y+"-"+m+"-"+d;
+}
+
+</script>
+
+</head>
+																
+<body onload="load();" onunload="exit();" bgcolor="transparent" style="margin:0; padding:0; font-size:26px; background:url(images/BG.jpg) no-repeat left top; color:#00000; font-family:'黑体';">
+<img src="images/LOGO.png" style="position:absolute;left:330px; top:33px;" />
+<img src="images/Column.png" style="position:absolute;left:1015px; top:35px;" />
+<!-- 菜单-->
+<div id="menufocus" style="position:absolute; left:83px; top:169px; width:165px; height:55px; background:url(images/JD-1.png)no-repeat;"></div>
+<div id="pointto" style="position:absolute; left:260px; top:183px; width:25px; height:22px; background:url(images/PointTo.png)no-repeat;visibility:hidden;"></div>
+<div id="menu0" style="position:absolute; left:91px; top:177px; width:158px; height:41px; font-size:50px; font-weight:bold; background:url(images/Button-3.png)no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">套&nbsp;&nbsp;餐</div>
+</div>
+<div id="menu1" style="position:absolute; left:91px; top:227px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url(images/Button-3.png)no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">点&nbsp;&nbsp;菜</div>
+</div>
+<div id="menu1-1" style="position:absolute; left:91px; top:267px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url()no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">热&nbsp;&nbsp;菜</div>
+</div>
+<div id="menu1-1" style="position:absolute; left:91px; top:307px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url()no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">冷&nbsp;&nbsp;菜</div>
+</div>
+<div id="menu1-1" style="position:absolute; left:91px; top:347px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url()no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">主&nbsp;&nbsp;食</div>
+</div>
+<div id="menu1-1" style="position:absolute; left:91px; top:387px; width:158px; height:41px;color:gray; font-size:43px; font-weight:bold; background:url()no-repeat;">
+<div style=" margin-top:5px;text-align:center; font-size:24px;">酒&nbsp;&nbsp;水</div>
+</div>
+<div id="tips" style="position:absolute; left:97px; top:448px; width:188px; height:202px; font-size:38px; font-weight:bold; background:url(images/Tagging.png)no-repeat;"></div>
+<!-- 内容 -->
+<div id="up" style="position:absolute; left:710px; top:140px; width:42px; height:46px; font-size:38px; font-weight:bold; background:url(images/up.png)no-repeat;"></div>
+<div id="down" style="position:absolute; left:710px; top:580px; width:45px; height:40px; font-size:38px; font-weight:bold; background:url(images/down.png)no-repeat;"></div>
+<div id="page" style="position:absolute; left:715px; top:620px; width:109px; height:36px; font-size:18px; font-weight:bold;">
+<span id="cupage" style="position:absolute; width:135px; left: -5px;  height: 27px;" >1</span>
+<span id="spilt" style="position:absolute; width:135px; left: 8px;  height: 27px;" >/</span>
+<span id="topage" style="position:absolute; width:135px; left: 23px;  height: 27px;" >3</span></div>
+<div id="orderfocus" style="position:absolute; left:1140px; top:205px; width:55px; height:202px; font-size:20px; font-weight:bold; background:url(images/JD-2.png)no-repeat;visibility:hidden;">
+</div>
+<div id="contentfocus" style="z-index:1;font-size:22px;color:#FFFFFF;position:absolute; left:330px; top:185px; width:264px; height:387px; background:url(images/Frame.png);"></div>
+<div id="content0" style="z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:330px; top:190px; width:264px; height:387px; background:url(images/noselect.png)"> 
+        <img src="images/poster0.jpg" name="content_poster0" id="content_poster0" style="position:absolute;left:24px; top:25px;width:215px;height:265px;" />  
+	    <span id="content_name0" style="position:absolute; width:135px; left: 20px; top: 300px; height: 27px;" >红烧排骨</span>
+		<span id="content_text0" style="position:absolute; width:280px; left: 20px; top: 330px;" >主菜</span>
+		<img id="content_status0" src="images/Selected.png" style="z-index:3;position:absolute; left: 175px; top: 295px;" />
+</div>
+
+<div id="content1" style="background:#cccccc;z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:600px; top:190px; width:264px; height:387px; background:url(images/poster.png)"> 
+        <img src="images/poster0.jpg" name="content_poster1" id="content_poster1" style="position:absolute;left:24px; top:25px;width:215px;height:265px;" />  
+	    <span id="content_name1" style="position:absolute; width:135px; left: 20px; top: 300px; height: 27px;" >红烧排骨</span>
+		<span id="content_text1" style="position:absolute; width:280px; left: 20px; top: 330px;" >主菜</span>
+		<img id="content_status1" src="images/Selected.png" style="z-index:3;position:absolute; left: 175px; top: 295px;" />
+</div>
+<div id="discontent1" style="background:#cccccc;z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:615px; top:204px; width:238px; height:347px; background:url(images/noselect.png)"></div>
+<div id="content2" style="z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:870px; top:190px; width:264px; height:387px; background:url(images/poster.png)"> 
+        <img src="images/poster0.jpg" name="content_poster2" id="content_poster2" style="position:absolute;left:24px; top:25px;width:215px;height:265px;" />  
+	    <span id="content_name2" style="position:absolute; width:135px; left: 20px; top: 300px; height: 27px;" >红烧排骨</span>
+		<span id="content_text2" style="position:absolute; width:280px; left: 20px; top: 330px;" >主菜</span>
+		<img id="content_status2" src="images/Selected.png" style="z-index:3;position:absolute; left: 175px; top: 295px;visibility:hidden;" />
+</div>
+<div id="discontent2" style="z-index:2;font-size:22px;color:#FFFFFF;position:absolute; left:882px; top:204px; width:238px; height:347px; background:url(images/noselect.png)"></div>
+<div id="orderfocus" style="position:absolute; left:1140px; top:205px; width:55px; height:202px; font-size:20px; font-weight:bold; background:url(images/JD-2.png)no-repeat;">
+</div>
+
+<div id="submit" style="color:gray;position:absolute; left:1150px; top:211px; width:38px; height:202px; font-size:20px; font-weight:bold; background:url(images/Button-2.png)no-repeat;">
+<div style=" margin-top:12px;text-align:center;">提</div>
+<div style=" margin-top:12px;text-align:center;">交</div>
+<div style=" margin-top:12px;text-align:center;">订</div>
+<div style=" margin-top:12px;text-align:center;">单</div>
+</div>
+
+<div id="select" style="position:absolute; left:1150px; top:395px; width:38px; height:202px; font-size:20px; font-weight:bold; background:url(images/Button-2.png)no-repeat;">
+<div style=" margin-top:12px;text-align:center;">查</div>
+<div style=" margin-top:12px;text-align:center;">看</div>
+<div style=" margin-top:12px;text-align:center;">订</div>
+<div style=" margin-top:12px;text-align:center;">单</div>
+</div>
+<div id="alert" style="position:absolute;left:380px;top:220px;width:612px;height:303px; font-size:32px; background:url(images/tanchu.png) no-repeat; color:#000000; visibility:hidden;">
+   <div id="msg" style="position:absolute;top:40px; width:500px; height:40px; left: 50px; text-align:center;"></div>
+   <div id="alert_text" style="position:absolute;top:80px; width:500px; height:40px; left: 60px; text-align:center;"></div>
+   <div style="position:absolute; top:160px; width:536px; height:40px; left: 50px; text-align:center;">如有问题，请联系18602696817.</div>
+   <div id="alert_btn" style="position:absolute;left:230px; top:210px;  width:158px; height:52px; color:#ffffff; text-align:center; line-height:52px; background:url(images/btn.png) no-repeat">确定</div>
+</div>
+<div style="position:absolute; left: 1065px; top: 601px;" align="center"> <span id="money" style="font-weight:700; position:absolute; left: -13px; top: -3px; width: 82px;" >20元</span></div>
+<div id="orderdiv" style="visibility:hidden;z-index:4;position:absolute;left:3px;top:-1px;width:1277px;height:697px; font-size:19px; background:url(images/BG-2.png) no-repeat; color:#000000; ">
+ <div id="zhucaise" style="position:absolute;top:258px; width:196px; height:128px; left: 318px; text-align:center;">
+ 	<span id="zhucai1" style="position:absolute; width:151px; left: 27px; top: 30px; height: 27px;" >红烧排骨</span>
+	<span id="zhucai2" style="position:absolute; width:151px; left: 27px; top: 5px; height: 27px;" >香辣排骨</span></div>
+ <div id="fucaise" style="position:absolute;top:258px; width:196px; height:128px; left: 538px; text-align:center;">
+ 	<span id="fucai1" style="position:absolute; width:151px; left: 25px; top: 5px; height: 27px;" >副菜副菜</span>
+	<span id="fucai2" style="position:absolute; width:151px; left: 25px; top: 30px; height: 27px;" >副菜副菜222</span></div>
+ <div id="sucaise" style="position:absolute;top:258px; width:196px; height:128px; left: 752px; text-align:center;">
+ 	<span id="sucai1" style="position:absolute; width:151px; left: 21px; top: 5px; height: 27px;" >素菜素菜</span>
+	<span id="sucai2" style="position:absolute; width:151px; left: 21px; top: 30px; height: 27px;" >素菜素菜</span>
+	<span id="sucai3" style="position:absolute; width:151px; left: 21px; top: 55px; height: 27px;" >素菜素菜</span>
+	<span id="sucai4" style="position:absolute; width:151px; left: 21px; top: 80px; height: 27px;" >素菜素菜</span></div>
+	
+<div style="font-weight:700;font-size:19px;z-index:7; position:absolute; left: 765px; top: 373px; background:url(images/Button-4.png) no-repeat; width: 85px; height: 29px;"      align="center">
+		<span id="lunch" style="position:absolute; width:58px; left: 14px; top: 4px; height: 20px;" >午餐</span></div>
+	<div style="font-weight:700;font-size:19px;z-index:7; position:absolute; left: 860px; top: 373px; background:url(images/Button-4-.png) no-repeat; width: 85px; height: 29px;" 					      align="center"> 
+	 	<span id="dinner" style="position:absolute; width:58px; left: 14px; top: 4px; height: 20px;" >晚餐</span></div>
+	<div id="ldselect" style="visibility:hidden; font-weight:700;font-size:19px;z-index:5; position:absolute; left: 757px; top: 365px; background:url(images/Button-4-JD.png) no-repeat; width: 103px;       height: 44px;" align="center"></div>
+	<div id="dselect" style="visibility:show; font-weight:700;font-size:19px;z-index:5; position:absolute; left: 852px; top: 365px; background:url(images/Button-4-JD.png) no-repeat; width: 103px;       height: 44px;" align="center"></div>
+	<div id="delivertime" style="color:gray;font-size:14px;z-index:5; position:absolute; left: 416px; top: 389px; width:103px;height: 43px;" align="center">
+		<span id="lunchtime" style="position:absolute; width:83px; left: 14px; top: 4px; height: 20px;" >11:00-13:00</span>
+		<span id="dinnertime" style="position:absolute; width:83px; left: 14px; top: 24px; height: 20px;" >17:00-19:00</span>
+	</div>
+	<div id="minusfoucs" style="visibility:hidden; background:url(images/Reduction.png) no-repeat;color:gray;font-size:14px;z-index:5; position:absolute; left: 795px; top: 429px; width:55px;       height: 30px;" align="center">	</div>
+	<div id="minusfoucs2" style="visibility:hidden; background:url(images/Reduction-2.png) no-repeat;color:gray;font-size:14px;z-index:5; position:absolute; left: 788px; top: 419px; width:55px;       height: 30px;" align="center">	</div>
+	<div style="font-weight:700;font-size:23px;z-index:7; position:absolute; left: 812px; top: 414px;  width: 85px; height: 29px;"align="center"> 
+	 	<span id="totalsum" style="position:absolute; width:58px; left: 14px; top: 4px; height: 20px;" >1</span></div>
+	<div id="addfoucs" style=" background:url(images/Plus.png) no-repeat;color:gray;font-size:14px;z-index:5; position:absolute; left: 895px; top: 420px; width:103px;       height: 43px;" align="center">	</div>
+	<div id="addfoucs2" style="visibility:hidden; background:url(images/Plus-2.png) no-repeat;color:gray;font-size:14px;z-index:5; position:absolute; left: 887px; top: 409px; width:103px;       height: 43px;" align="center">	</div>
+	<div style="font-weight:700;font-size:26px;z-index:7; position:absolute; left: 869px; top: 482px;  width: 85px; height: 29px;" 					      align="center"> 
+	 	<span id="totalmoney" style="position:absolute; width:58px; left: 14px; top: 4px; height: 20px;" >1111</span></div>
+		<div style="background:url(images/Button.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 638px; top: 526px;  width: 158px; height: 42px;" 					      align="center"> 
+	 	<span id="submitbutton" style="position:absolute; width:108px; left: 24px; top: 8px; height: 20px;" >确认提交</span>	</div>
+		<div style="background:url(images/Button-S.png) no-repeat;font-weight:700;font-size:26px;z-index:6; position:absolute; left: 631px; top: 519px;  width: 178px; height: 57px;" 					      align="center">	 	</div>
+		<div style="background:url(images/Button.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 805px; top: 526px;  width: 158px; height: 42px;" 					      align="center"> 
+	 	<span id="cancelbutton" style="position:absolute; width:108px; left: 25px; top: 8px; height: 20px;" >取&nbsp;&nbsp;消</span>	</div>
+		<div id="cancelfoucs" style="background:url(images/Button-S.png) no-repeat;font-weight:700;font-size:26px;z-index:6; position:absolute; left: 798px; top: 519px;  width: 178px; height: 57px;" 					      align="center">	 		</div>
+</div>
+	<div id="orderresultdiv" style="display:none;z-index:4;position:absolute;left:3px;top:-1px;width:1277px;height:697px; font-size:19px; background:url(images/BG-3.png) no-repeat; color:#000000;">
+	<div style="background:url(images/sub-success.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 425px; top: 278px;  width: 474px; height: 100px;" align="center">	</div>
+	<div style="background:url(images/Button.png) no-repeat;font-weight:700;font-size:26px;z-index:7; position:absolute; left: 805px; top: 526px;  width: 158px; height: 42px;" 					      align="center"> 
+	 	<span id="cancelbutton" style="position:absolute; width:108px; left: 25px; top: 8px; height: 20px;" >取&nbsp;&nbsp;消</span>
+	</div>
+	<div id="cancelfoucs" style="background:url(images/Button-S.png) no-repeat;font-weight:700;font-size:26px;z-index:6; position:absolute; left: 798px; top: 519px;  width: 178px; height: 57px;" align="center"></div>
+	</div>
+</body>
+
+</html>
+
+
+                                        
